@@ -29,68 +29,77 @@ class PaymentHomePage extends StatelessWidget {
               crossAxisSpacing: 24,
               mainAxisSpacing: 24,
               childAspectRatio: 1,
-              children: providers.map((provider) {
-                return Card(
-                  elevation: 4,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(24),
-                    onTap: () async {
-                      showDialog(
-                        context: context,
-                        barrierDismissible: false,
-                        builder: (context) => Dialog(
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                          child: Padding(
-                            padding: const EdgeInsets.all(24),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: const [
-                                CircularProgressIndicator(),
-                                SizedBox(height: 16),
-                                Text('결제 처리중...', style: TextStyle(fontSize: 16)),
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
-                      await context.read<PaymentCubit>().pay(
-                        PaymentRequest(
-                          provider: provider.key,
-                          amount: 10000,
-                          orderId: 'ORDER123',
-                        ),
-                      );
-                      if (context.mounted) {
-                        Navigator.of(context, rootNavigator: true).pop();
-                      }
-                    },
-                    child: Center(
+              children: providers.map((provider) => _buildProviderCard(context, provider)).toList(),
+            ),
+          ),
+          const SizedBox(height: 12),
+          BlocListener<PaymentCubit, PaymentState>(
+            listener: (context, state) {
+              if (state.status == PaymentStatus.processing) {
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (context) => Dialog(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(provider.icon, color: provider.color, size: 48),
-                          const SizedBox(height: 12),
-                          Text(provider.name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                        children: const [
+                          CircularProgressIndicator(),
+                          SizedBox(height: 16),
+                          Text('결제 처리중...', style: TextStyle(fontSize: 16)),
                         ],
                       ),
                     ),
                   ),
                 );
-              }).toList(),
-            ),
-          ),
-          const SizedBox(height: 12),
-          BlocBuilder<PaymentCubit, PaymentState>(
-            builder: (context, state) {
-              return _buildStatusCard(state.status, state.message);
+              }
             },
+            child: BlocBuilder<PaymentCubit, PaymentState>(
+              builder: (context, state) {
+                return _buildStatusCard(state.status, state.message);
+              },
+            ),
           ),
           const SizedBox(height: 24),
         ],
       ),
     );
   }
+
+  Widget _buildProviderCard(BuildContext context, PaymentProvider provider) {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(24),
+        onTap: () async {
+          await context.read<PaymentCubit>().pay(
+            PaymentRequest(
+              provider: provider.key,
+              amount: 10000,
+              orderId: 'ORDER123',
+            ),
+          );
+          if (context.mounted) {
+            Navigator.of(context, rootNavigator: true).pop();
+          }
+        },
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(provider.icon, color: provider.color, size: 48),
+              const SizedBox(height: 12),
+              Text(provider.name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
 
   Widget _buildStatusCard(PaymentStatus status, String message) {
     IconData icon;
